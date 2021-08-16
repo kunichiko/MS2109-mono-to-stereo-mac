@@ -7,10 +7,6 @@
 
 import Foundation
 
-class CARingBufferDummy {
-    
-}
-
 func makePointer<T>(withVal val: T) -> UnsafeMutablePointer<T>  {
     let pointer = UnsafeMutablePointer<T>.allocate(capacity: 1) // Tインスタンスを一つ作成する
     pointer.initialize(to: val) // 必ず初期化する
@@ -19,10 +15,23 @@ func makePointer<T>(withVal val: T) -> UnsafeMutablePointer<T>  {
 
 class Mono2Stereo {
     
-    private var player : Mono2StereoPlayer
+    private var player : UnsafeMutablePointer<Mono2StereoPlayer>
     
     init() {
-        player = Mono2StereoPlayer()
+        player = makePointer(withVal: Mono2StereoPlayer())
+    }
+    
+    
+    var inputMaxValue: Float32 {
+        return player.pointee.inputMaxValue
+    }
+
+    var outputMaxValue: Float32 {
+        return player.pointee.outputMaxValue
+    }
+
+    var bufferDiff: Int {
+        return player.pointee.bufferDiff
     }
     
     // Replace with Listings 8.4 - 8.14
@@ -36,14 +45,14 @@ class Mono2Stereo {
             print("Can't get output unit");
             exit(-1)
         }
-        CheckError(AudioComponentInstanceNew(comp, &player.inputUnit),
+        CheckError(AudioComponentInstanceNew(comp, &player.pointee.inputUnit),
                    "Couldn't open component for inputUnit")
 
         var disableFlag: UInt32 = 0
         var enableFlag: UInt32 = 1
-        var outputBus: AudioUnitScope = 0
-        var inputBus: AudioUnitScope = 1
-        CheckError (AudioUnitSetProperty(player.inputUnit,
+        let outputBus: AudioUnitScope = 0
+        let inputBus: AudioUnitScope = 1
+        CheckError (AudioUnitSetProperty(player.pointee.inputUnit,
                                          kAudioOutputUnitProperty_EnableIO,
                                          kAudioUnitScope_Input,
                                          inputBus,
@@ -51,7 +60,7 @@ class Mono2Stereo {
                                          (UInt32)(MemoryLayout<UInt32>.size)),
                     "Couldn't enable input on I/O unit")
 
-        CheckError (AudioUnitSetProperty(player.inputUnit,
+        CheckError (AudioUnitSetProperty(player.pointee.inputUnit,
                                          kAudioOutputUnitProperty_EnableIO,
                                          kAudioUnitScope_Output,
                                          outputBus,
@@ -79,7 +88,7 @@ class Mono2Stereo {
 
         print("Default Input Device: \(defaultDevice)")
         
-        CheckError(AudioUnitSetProperty(player.inputUnit,
+        CheckError(AudioUnitSetProperty(player.pointee.inputUnit,
                                         kAudioOutputUnitProperty_CurrentDevice,
                                         kAudioUnitScope_Global,
                                         outputBus,
@@ -88,20 +97,20 @@ class Mono2Stereo {
                    "Couldn't set default device on I/O unit");
 
         propertySize = (UInt32)(MemoryLayout<AudioStreamBasicDescription>.size)
-        CheckError(AudioUnitGetProperty(player.inputUnit,
+        CheckError(AudioUnitGetProperty(player.pointee.inputUnit,
                                         kAudioUnitProperty_StreamFormat,
                                         kAudioUnitScope_Output,
                                         inputBus,
-                                        &player.inputStreamFormat,
+                                        &player.pointee.inputStreamFormat,
                                         &propertySize),
                    "Couldn't get ASBD from input unit")
         
-        DebugStreamFormat("Default Input Stream Format", player.inputStreamFormat)
+        DebugStreamFormat("Default Input Stream Format", player.pointee.inputStreamFormat)
         
         //Listing 8.9 Adopting Hardware Input Sample Rate
         var deviceFormat = AudioStreamBasicDescription()
         propertySize = (UInt32)(MemoryLayout<AudioStreamBasicDescription>.size)
-        CheckError(AudioUnitGetProperty(player.inputUnit,
+        CheckError(AudioUnitGetProperty(player.pointee.inputUnit,
                                         kAudioUnitProperty_StreamFormat,
                                         kAudioUnitScope_Input,
                                         inputBus,
@@ -110,36 +119,32 @@ class Mono2Stereo {
                    "Couldn't get ASBD from input unit")
         DebugStreamFormat("Device Format", deviceFormat)
 
-        player.inputStreamFormat = deviceFormat
+        player.pointee.inputStreamFormat = deviceFormat
         propertySize = (UInt32)(MemoryLayout<AudioStreamBasicDescription>.size)
-        CheckError(AudioUnitSetProperty(player.inputUnit,
+        CheckError(AudioUnitSetProperty(player.pointee.inputUnit,
                                         kAudioUnitProperty_StreamFormat,
                                         kAudioUnitScope_Output,
                                         inputBus,
-                                        &player.inputStreamFormat,
+                                        &player.pointee.inputStreamFormat,
                                         propertySize),
                    "Couldn't set ASBD on input unit")
 
-        DebugStreamFormat("Changed Input Stream Format", player.inputStreamFormat)
+        DebugStreamFormat("Changed Input Stream Format", player.pointee.inputStreamFormat)
 
-        player.outputStreamFormat = deviceFormat
-    //    player->outputStreamFormat.mFramesPerPacket = deviceFormat.mFramesPerPacket;
-        player.outputStreamFormat.mChannelsPerFrame = 2
-    //    player->outputStreamFormat.mBitsPerChannel = deviceFormat.mBitsPerChannel;
-        player.outputStreamFormat.mSampleRate = deviceFormat.mSampleRate / 2
-    //    player->outputStreamFormat.mSampleRate = 48000;
-    //    player->outputStreamFormat.mSampleRate = 44100.0;
-    //    player->outputStreamFormat.mFormatID = kAudioFormatLinearPCM;
-        player.outputStreamFormat.mFormatFlags = kAudioFormatFlagIsNonInterleaved | kAudioFormatFlagIsFloat | kAudioFormatFlagIsPacked
-        player.outputStreamFormat.mBytesPerFrame = 4
-        player.outputStreamFormat.mBytesPerPacket = 4
+        player.pointee.outputStreamFormat = deviceFormat
+        player.pointee.outputStreamFormat.mChannelsPerFrame = 2
+        player.pointee.outputStreamFormat.mSampleRate = deviceFormat.mSampleRate / 2
+        player.pointee.outputStreamFormat.mFormatID = kAudioFormatLinearPCM
+        player.pointee.outputStreamFormat.mFormatFlags = kAudioFormatFlagIsNonInterleaved | kAudioFormatFlagIsFloat | kAudioFormatFlagIsPacked
+        player.pointee.outputStreamFormat.mBytesPerFrame = 4
+        player.pointee.outputStreamFormat.mBytesPerPacket = 4
 
-        DebugStreamFormat("Output Stream Format", player.outputStreamFormat)
+        DebugStreamFormat("Output Stream Format", player.pointee.outputStreamFormat)
 
         //Listing 8.10 Calculating Capture Buffer Size for an I/O Unit
         var bufferSizeFrames: UInt32 = 0;
         propertySize = (UInt32)(MemoryLayout<UInt32>.size)
-        CheckError (AudioUnitGetProperty(player.inputUnit,
+        CheckError (AudioUnitGetProperty(player.pointee.inputUnit,
                                          kAudioDevicePropertyBufferFrameSize,
                                          kAudioUnitScope_Global,
                                          0,
@@ -154,34 +159,34 @@ class Mono2Stereo {
         //Listing 8.11 Creating an AudioBufferList to Receive Capture Data
         // Allocate an AudioBufferList plus enough space for
         // array of AudioBuffers
-        let propsize: UInt32 = UInt32(MemoryLayout.offset(of: \AudioBufferList.mBuffers)!) + (UInt32(MemoryLayout<AudioBuffer>.size) * player.inputStreamFormat.mChannelsPerFrame)
+        let propsize: UInt32 = UInt32(MemoryLayout.offset(of: \AudioBufferList.mBuffers)!) + (UInt32(MemoryLayout<AudioBuffer>.size) * player.pointee.inputStreamFormat.mChannelsPerFrame)
         // malloc buffer lists
-        assert(player.inputStreamFormat.mChannelsPerFrame == 1)
-        player.inputBuffer = AudioBufferList( mNumberBuffers: player.inputStreamFormat.mChannelsPerFrame,
+        assert(player.pointee.inputStreamFormat.mChannelsPerFrame == 1)
+        player.pointee.inputBuffer = AudioBufferList( mNumberBuffers: player.pointee.inputStreamFormat.mChannelsPerFrame,
                                               mBuffers:
-                                                AudioBuffer( mNumberChannels: UInt32(player.inputStreamFormat.mChannelsPerFrame),
+                                                AudioBuffer( mNumberChannels: UInt32(player.pointee.inputStreamFormat.mChannelsPerFrame),
                                                              mDataByteSize: bufferSizeBytes,
                                                              mData: malloc(Int(bufferSizeBytes))))
-        player.converterBuffer = AudioBufferList( mNumberBuffers: player.inputStreamFormat.mChannelsPerFrame,
+        player.pointee.converterBuffer = AudioBufferList( mNumberBuffers: player.pointee.inputStreamFormat.mChannelsPerFrame,
                                               mBuffers:
-                                                AudioBuffer( mNumberChannels: UInt32(player.inputStreamFormat.mChannelsPerFrame),
+                                                AudioBuffer( mNumberChannels: UInt32(player.pointee.inputStreamFormat.mChannelsPerFrame),
                                                              mDataByteSize: bufferSizeBytes,
                                                              mData: malloc(Int(bufferSizeBytes))))
 
         // Listing 8.12 Creating a CARingBuffer
         // Alloc ring buffer that will hold data between the
         // two audio devices
-        player.ringBuffer = CARingBufferWrapper()
-        player.ringBuffer.allocate(withChannelsPerFrame: player.inputStreamFormat.mChannelsPerFrame,
-                                   bytesPerFrame: player.inputStreamFormat.mBytesPerFrame,
-                                   bufferSize: bufferSizeFrames * 100)
+        player.pointee.ringBuffer = CARingBufferWrapper()
+        player.pointee.ringBuffer.allocate(withChannelsPerFrame: player.pointee.inputStreamFormat.mChannelsPerFrame,
+                                           bytesPerFrame: player.pointee.inputStreamFormat.mBytesPerFrame,
+                                           bufferSize: bufferSizeFrames * 4096)
         
         // Listing 8.13 Setting up an Input Callback on an AUHAL
         // Set render proc to supply samples from input unit
         var callbackStruct =  AURenderCallbackStruct()
         callbackStruct.inputProc = InputRenderProc
-        callbackStruct.inputProcRefCon = UnsafeMutableRawPointer(makePointer(withVal: self.player))
-        CheckError(AudioUnitSetProperty(player.inputUnit,
+        callbackStruct.inputProcRefCon = UnsafeMutableRawPointer(self.player)
+        CheckError(AudioUnitSetProperty(player.pointee.inputUnit,
                                         kAudioOutputUnitProperty_SetInputCallback,
                                         kAudioUnitScope_Global,
                                         0,
@@ -190,11 +195,11 @@ class Mono2Stereo {
                    "Couldn't set input callback")
 
         //Listing 8.14 Initializing Input AUHAL and Offset Time Counters
-                   CheckError(AudioUnitInitialize(player.inputUnit),
+        CheckError(AudioUnitInitialize(player.pointee.inputUnit),
                    "Couldn't initialize input unit")
 
-        player.firstInputSampleTime = -1
-        player.inToOutSampleTimeOffset = -1
+        player.pointee.firstInputSampleTime = -1
+        player.pointee.inToOutSampleTimeOffset = -1
         print("Bottom of CreateInputUnit()\n")
     }
 
@@ -208,24 +213,43 @@ class Mono2Stereo {
             print("Can't get output unit");
             exit(-1)
         }
-        CheckError(AudioComponentInstanceNew(comp, &player.outputUnit),
+        
+        CheckError(AudioComponentInstanceNew(comp, &player.pointee.outputUnit),
                    "Couldn't open component for outputUnit")
+
+        let outputBus: AudioUnitScope = 0
+//        var defaultDevice: AudioDeviceID = 91 // Mac mini speaker
+        var defaultDevice: AudioDeviceID = 72 // BlackHole 2ch
+/*        CheckError(AudioUnitGetProperty(player.pointee.inputUnit,
+                                        kAudioUnitProperty_StreamFormat,
+                                        kAudioUnitScope_Output,
+                                        inputBus,
+                                        &player.pointee.inputStreamFormat,
+                                        &propertySize),
+                   "Couldn't get ASBD from input unit")*/
+        CheckError(AudioUnitSetProperty(player.pointee.outputUnit,
+                                        kAudioOutputUnitProperty_CurrentDevice,
+                                        kAudioUnitScope_Global,
+                                        outputBus,
+                                        &defaultDevice,
+                                        (UInt32)(MemoryLayout<AudioDeviceID>.size)),
+                   "Couldn't set output device on I/O unit");
 
         // Set the stream format on the output unit's input scope
         var propertySize = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
-        CheckError(AudioUnitSetProperty(player.outputUnit,
+        CheckError(AudioUnitSetProperty(player.pointee.outputUnit,
                                         kAudioUnitProperty_StreamFormat,
                                         kAudioUnitScope_Input,
                                         0,
-                                        &player.outputStreamFormat,
+                                        &player.pointee.outputStreamFormat,
                                         propertySize),
                    "Couldn't set stream format on output unit");
 
         var callbackStruct = AURenderCallbackStruct()
         callbackStruct.inputProc = OutputRenderProc
-        callbackStruct.inputProcRefCon = UnsafeMutableRawPointer(makePointer(withVal: self.player))
+        callbackStruct.inputProcRefCon = UnsafeMutableRawPointer(self.player)
         propertySize = UInt32(MemoryLayout<AURenderCallbackStruct>.size)
-        CheckError(AudioUnitSetProperty(player.outputUnit,
+        CheckError(AudioUnitSetProperty(player.pointee.outputUnit,
                                         kAudioUnitProperty_SetRenderCallback,
                                         kAudioUnitScope_Global,
                                         0,
@@ -235,17 +259,17 @@ class Mono2Stereo {
         
 
         // Initialize the unit
-        CheckError(AudioUnitInitialize(player.outputUnit),
+        CheckError(AudioUnitInitialize(player.pointee.outputUnit),
                        "Couldn't initialize output unit");
 
-        player.firstOutputSampleTime = -1;
+        player.pointee.firstOutputSampleTime = -1;
     }
 
     func start() {
         // Start playing
-        CheckError(AudioOutputUnitStart(player.inputUnit),
+        CheckError(AudioOutputUnitStart(player.pointee.inputUnit),
                    "AudioOutputUnitStart failed");
-        CheckError(AudioOutputUnitStart(player.outputUnit),
+        CheckError(AudioOutputUnitStart(player.pointee.outputUnit),
                     "Couldn't start output unit");
     }
 }
@@ -284,12 +308,16 @@ func InputRenderProc(_ inRefCon: UnsafeMutableRawPointer,
     let buffers = UnsafeMutableAudioBufferListPointer(&player.pointee.inputBuffer)
     var maxValue: Float32 = 0.0;
     for buffer in buffers {
-        for frame in 0...Int(inNumberFrames) {
+        for frame in 0..<Int(inNumberFrames) {
             let p = buffer.mData!.bindMemory(to: Float32.self, capacity: Int(buffer.mDataByteSize)/4)
             maxValue = fmax(maxValue, p[frame])
         }
     }
-    player.pointee.inputMaxValue = maxValue;
+    DispatchQueue.main.async {
+        player.pointee.inputMaxValue = maxValue
+        player.pointee.bufferDiff += Int(inNumberFrames)
+    }
+
 
     // これが成功した場合は、サンプルをリングバッファにコピーできます。CARingBufferのStore（）メソッドは、
     // この目的のためだけに設計されています。
@@ -324,8 +352,12 @@ func OutputRenderProc(_ inRefCon: UnsafeMutableRawPointer,
     // 両方がある場合は、それらの間の差（またはオフセット）を計算することで、これに対処できます。
 
     // Have we ever logged output timing? (for offset calculation)
-    if (player.pointee.firstInputSampleTime < 0.0) {
-        player.pointee.firstInputSampleTime = inTimeStamp.pointee.mSampleTime
+    if (player.pointee.firstOutputSampleTime < 0.0) {
+        // ある程度バッファが貯まるまでは出力を始めないようにする
+//        guard (player.pointee.bufferDiff >= 2048) else {
+//            return noErr
+//        }
+        player.pointee.firstOutputSampleTime = inTimeStamp.pointee.mSampleTime
         if ((player.pointee.firstOutputSampleTime >= 0.0) && (player.pointee.inToOutSampleTimeOffset < 0.0)) {
             player.pointee.inToOutSampleTimeOffset = player.pointee.firstInputSampleTime - player.pointee.firstOutputSampleTime
         }
@@ -337,6 +369,7 @@ func OutputRenderProc(_ inRefCon: UnsafeMutableRawPointer,
     // 可能なオフセット計算とは別に、このコールバックの実際の作業は、リングバッファーからサンプルを
     // フェッチすることです。これは、リスト8.22に示すように、CARingBufferのFetch（）メソッドへの
     // 1行の呼び出しです。
+    
     
     // Copy samples out of ring buffer
     var outputProcErr = noErr
@@ -363,7 +396,7 @@ func OutputRenderProc(_ inRefCon: UnsafeMutableRawPointer,
     var ch = 0
     for obuffer in obuffers {
         let op = obuffer.mData!.bindMemory(to: Float32.self, capacity: Int(obuffer.mDataByteSize)/4)
-        for frame in 0...Int(inNumberFrames) {
+        for frame in 0..<Int(inNumberFrames) {
             op[frame] = cp[frame*2+ch]
         }
         ch += 1
@@ -372,11 +405,14 @@ func OutputRenderProc(_ inRefCon: UnsafeMutableRawPointer,
     var maxValue: Float32 = 0.0;
     for buffer in cbuffers {
         let p = buffer.mData!.bindMemory(to: Float32.self, capacity: Int(buffer.mDataByteSize)/4)
-        for frame in 0...Int(inNumberFrames) {
+        for frame in 0..<Int(inNumberFrames) {
             maxValue = fmax(maxValue, p[frame])
         }
     }
-    player.pointee.outputMaxValue = maxValue;
+    DispatchQueue.main.async {
+        player.pointee.outputMaxValue = maxValue;
+        player.pointee.bufferDiff -= Int(inNumberFrames*2)
+    }
     
     return outputProcErr;
 }
@@ -396,4 +432,6 @@ struct Mono2StereoPlayer {
     // for debug
     var inputMaxValue :Float32 = -1
     var outputMaxValue :Float32 = -1
+    
+    var bufferDiff: Int = 0
 }

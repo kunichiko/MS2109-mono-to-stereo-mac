@@ -17,12 +17,12 @@ func CheckError(_ error: OSStatus, _ operation: String) {
     }
 
     // See if it appears to be a 4-char-code
-    let code = CFSwapInt32HostToBig(UInt32(error))
-    print("Error: \(operation) (\(int32To4Chars(code)))\n")
+    let code = CFSwapInt32HostToBig(UInt32(bitPattern: error))
+    print("Error: \(operation) (\(int32To4Chars(code) ?? "\(error)"))\n")
     exit(1)
 }
 
-func int32To4Chars(_ code: UInt32) -> String {
+func int32To4Chars(_ code: UInt32) -> String? {
     let code0 = (code >> 24) & 0xff
     let code1 = (code >> 16) & 0xff
     let code2 = (code >> 8)  & 0xff
@@ -31,7 +31,7 @@ func int32To4Chars(_ code: UInt32) -> String {
         (isprint(Int32(code2)) != 0) && (isprint(Int32(code3)) != 0) {
         return "" + codeToString(code0) + codeToString(code1) + codeToString(code2) + codeToString(code3);
     } else {
-        return "    "
+        return nil
     }
 }
 
@@ -47,7 +47,7 @@ func DebugStreamFormat(_ name: String, _ format: AudioStreamBasicDescription) {
     print("Sample Rate       : \(format.mSampleRate)")
     print("Bytes Per Frame   : \(format.mBytesPerFrame)")
     print("Bytes Per Packet  : \(format.mBytesPerPacket)")
-    print("Format ID         : '" + int32To4Chars(format.mFormatID) + "'")
+    print("Format ID         : '" + (int32To4Chars(format.mFormatID) ?? "") + "'")
     print("Format Flags      : \(format.mFormatFlags)")
     print()
 }
