@@ -7,6 +7,10 @@
 
 import Foundation
 
+import AudioUnit
+
+typealias CARingBufferError = Int32
+
 class SyncVar<T> {
     private let _lock: NSRecursiveLock
     private var _var: T

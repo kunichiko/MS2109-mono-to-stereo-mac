@@ -7,6 +7,8 @@
 
 import Foundation
 
+import AVFoundation
+
 func makePointer<T>(withVal val: T) -> UnsafeMutablePointer<T>  {
     let pointer = UnsafeMutablePointer<T>.allocate(capacity: 1) // Tインスタンスを一つ作成する
     pointer.initialize(to: val) // 必ず初期化する
