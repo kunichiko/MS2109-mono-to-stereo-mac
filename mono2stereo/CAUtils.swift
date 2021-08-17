@@ -156,14 +156,18 @@ class AudioDeviceFinder {
             return
         }
 
+        var devices: [AudioDevice] = []
         for i in 0..<numDevices {
-            let audioDevice = AudioDevice(deviceID:devids[i])
-//            if (audioDevice.hasOutput) {
-                if let name = audioDevice.name, let uid = audioDevice.uid {
-                    let hasOut = audioDevice.hasOutput ? "O" : "X"
-                    print("Found device:\(devids[i]) hasout=\(hasOut) \"\(name)\", uid=\(uid)")
-                }
-//            }
+            devices.append(AudioDevice(deviceID:devids[i]))
+        }
+        devices.sort { a, b in
+            a.audioDeviceID < b.audioDeviceID
+        }
+        for audioDevice in devices {
+            if let name = audioDevice.name, let uid = audioDevice.uid {
+                let hasOut = audioDevice.hasOutput ? "O" : "X"
+                print("Found device:\(audioDevice.audioDeviceID) hasout=\(hasOut) \"\(name)\", uid=\(uid)")
+            }
         }
     }
 }

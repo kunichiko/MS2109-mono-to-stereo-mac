@@ -1,5 +1,5 @@
 //
-//  Mono2Stereo.swift
+//  Mono2StereoEngine.swift
 //  mono2stereo
 //
 //  Created by Kunihiko Ohnaka on 2021/08/16.
@@ -15,11 +15,14 @@ func makePointer<T>(withVal val: T) -> UnsafeMutablePointer<T>  {
     return UnsafeMutablePointer(pointer) // UnsafePointer<T>に変換
 }
 
-class Mono2Stereo {
+class Mono2StereoEngine {
+    
+    private var debug: Bool
     
     private var player : UnsafeMutablePointer<Mono2StereoPlayer>
     
-    init() {
+    init(debug: Bool) {
+        self.debug = debug
         player = makePointer(withVal: Mono2StereoPlayer())
     }
     
@@ -71,9 +74,22 @@ class Mono2Stereo {
         return player.pointee.outputSamplingRate
     }
 
+    private func defaultInputDeviceId() -> AudioDeviceID {
+        var defaultDevice: AudioDeviceID = kAudioObjectUnknown
+        var propertySize = (UInt32)(MemoryLayout<AudioDeviceID>.size)
+        var defaultDeviceProperty = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultInputDevice, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMaster)
+        CheckError (AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject),
+                                               &defaultDeviceProperty,
+                                               0,
+                                               nil,
+                                               &propertySize,
+                                               &defaultDevice),
+                    "Couldn't get default input device")
+        return defaultDevice
+    }
     
     // Replace with Listings 8.4 - 8.14
-    func createInputUnit() {
+    func createInputUnit(audioDeviceId: AudioDeviceID?) {
         // Generates a description that matches audio HAL
         var inputcd = AudioComponentDescription()
         inputcd.componentType = kAudioUnitType_Output
@@ -112,29 +128,19 @@ class Mono2Stereo {
         // 呼び出しを使用して、入力ハードウェアのサンプルレートを計算します。
         // この場合、必要なのは、システム環境設定で現在設定されている入力デバイスを識別するAudioDeviceIDだけです。
         
-        // Listing 8.6 Getting the Default Audio Input Device
-        var defaultDevice: AudioDeviceID = kAudioObjectUnknown
-        var propertySize = (UInt32)(MemoryLayout<AudioDeviceID>.size)
-        var defaultDeviceProperty = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultInputDevice, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMaster)
-        CheckError (AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject),
-                                               &defaultDeviceProperty,
-                                               0,
-                                               nil,
-                                               &propertySize,
-                                               &defaultDevice),
-                    "Couldn't get default input device")
+        var inputDeviceId = audioDeviceId ?? defaultInputDeviceId()
 
-        print("Default Input Device: \(defaultDevice)")
+        print("Input Device: \(inputDeviceId)")
         
         CheckError(AudioUnitSetProperty(player.pointee.inputUnit,
                                         kAudioOutputUnitProperty_CurrentDevice,
                                         kAudioUnitScope_Global,
                                         outputBus,
-                                        &defaultDevice,
+                                        &inputDeviceId,
                                         (UInt32)(MemoryLayout<AudioDeviceID>.size)),
                    "Couldn't set default device on I/O unit")
 
-        propertySize = (UInt32)(MemoryLayout<AudioStreamBasicDescription>.size)
+        var propertySize = (UInt32)(MemoryLayout<AudioStreamBasicDescription>.size)
         CheckError(AudioUnitGetProperty(player.pointee.inputUnit,
                                         kAudioUnitProperty_StreamFormat,
                                         kAudioUnitScope_Output,
@@ -143,7 +149,9 @@ class Mono2Stereo {
                                         &propertySize),
                    "Couldn't get ASBD from input unit")
         
-        DebugStreamFormat("Default Input Stream Format", player.pointee.inputStreamFormat)
+        if debug {
+            DebugStreamFormat("Default Input Stream Format", player.pointee.inputStreamFormat)
+        }
         
         //Listing 8.9 Adopting Hardware Input Sample Rate
         var deviceFormat = AudioStreamBasicDescription()
@@ -155,7 +163,9 @@ class Mono2Stereo {
                                         &deviceFormat,
                                         &propertySize),
                    "Couldn't get ASBD from input unit")
-        DebugStreamFormat("Device Format", deviceFormat)
+        if debug {
+            DebugStreamFormat("Device Format", deviceFormat)
+        }
 
         player.pointee.inputStreamFormat = deviceFormat
         propertySize = (UInt32)(MemoryLayout<AudioStreamBasicDescription>.size)
@@ -167,7 +177,9 @@ class Mono2Stereo {
                                         propertySize),
                    "Couldn't set ASBD on input unit")
 
-        DebugStreamFormat("Changed Input Stream Format", player.pointee.inputStreamFormat)
+        if debug {
+            DebugStreamFormat("Changed Input Stream Format", player.pointee.inputStreamFormat)
+        }
 
         player.pointee.outputStreamFormat = deviceFormat
         player.pointee.outputStreamFormat.mChannelsPerFrame = 2
@@ -177,7 +189,9 @@ class Mono2Stereo {
         player.pointee.outputStreamFormat.mBytesPerFrame = 4
         player.pointee.outputStreamFormat.mBytesPerPacket = 4
 
-        DebugStreamFormat("Output Stream Format", player.pointee.outputStreamFormat)
+        if debug {
+            DebugStreamFormat("Output Stream Format", player.pointee.outputStreamFormat)
+        }
 
         //Listing 8.10 Calculating Capture Buffer Size for an I/O Unit
         var bufferSizeFrames: UInt32 = 0
@@ -190,9 +204,11 @@ class Mono2Stereo {
                                          &propertySize),
                     "Couldn't get buffer frame size from input unit")
         let bufferSizeBytes: UInt32 = bufferSizeFrames * (UInt32)(MemoryLayout<Float32>.size)
-        print("● Buffer Size")
-        print("Buffer Size Frames : \(bufferSizeFrames)")
-        print("Buffer Size Bytes  : \(bufferSizeBytes)")
+        if debug {
+            print("● Buffer Size")
+            print("Buffer Size Frames : \(bufferSizeFrames)")
+            print("Buffer Size Bytes  : \(bufferSizeBytes)")
+        }
 
         //Listing 8.11 Creating an AudioBufferList to Receive Capture Data
         // Allocate an AudioBufferList plus enough space for
@@ -239,7 +255,6 @@ class Mono2Stereo {
 
         player.pointee.firstInputSampleTime = -1
         player.pointee.inToOutSampleTimeOffset = -1
-        print("Bottom of CreateInputUnit()\n")
     }
 
     func createAndConnectOutputUnit(audioDeviceId: AudioDeviceID?) {
