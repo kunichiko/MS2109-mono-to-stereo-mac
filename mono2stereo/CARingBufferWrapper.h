@@ -20,11 +20,11 @@ NS_ASSUME_NONNULL_BEGIN
 
 -(CARingBufferError)storeWithBuffer:(AudioBufferList*)abl
                              frames:(UInt32)frames
-                          startRead:(SInt64)frameNumber;
+                        frameNumber:(SInt64)frameNumber;
 
 -(CARingBufferError)fetchWithBuffer:(AudioBufferList*)abl
                              frames:(UInt32)frames
-                          startRead:(SInt64)startRead;
+                        frameNumber:(SInt64)frameNumber;
 
 @end
 

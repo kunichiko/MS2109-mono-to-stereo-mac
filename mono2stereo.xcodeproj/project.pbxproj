@@ -11,6 +11,7 @@
 		7A159D4A26C8056800BDC091 /* CARingBuffer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 7A159D4926C8056800BDC091 /* CARingBuffer.cpp */; };
 		7A159D5526CA22A700BDC091 /* CAUtils.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A159D5426CA22A700BDC091 /* CAUtils.swift */; };
 		7A159D5726CA230800BDC091 /* Mono2Stereo.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7A159D5626CA230800BDC091 /* Mono2Stereo.swift */; };
+		7AACD99726CBADBA0056E588 /* RingBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7AACD99626CBADBA0056E588 /* RingBuffer.swift */; };
 		7AE1140626CA51AF00B9B26B /* CARingBufferWrapper.mm in Sources */ = {isa = PBXBuildFile; fileRef = 7AE1140526CA51AF00B9B26B /* CARingBufferWrapper.mm */; };
 /* End PBXBuildFile section */
 
@@ -38,6 +39,7 @@
 		7A159D5126C8F84400BDC091 /* mono2stereo.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = mono2stereo.entitlements; sourceTree = "<group>"; };
 		7A159D5426CA22A700BDC091 /* CAUtils.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CAUtils.swift; sourceTree = "<group>"; };
 		7A159D5626CA230800BDC091 /* Mono2Stereo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Mono2Stereo.swift; sourceTree = "<group>"; };
+		7AACD99626CBADBA0056E588 /* RingBuffer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RingBuffer.swift; sourceTree = "<group>"; };
 		7AE1140426CA51AF00B9B26B /* CARingBufferWrapper.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = CARingBufferWrapper.h; sourceTree = "<group>"; };
 		7AE1140526CA51AF00B9B26B /* CARingBufferWrapper.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = CARingBufferWrapper.mm; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -75,6 +77,7 @@
 				7A159D3A26C7804B00BDC091 /* main.swift */,
 				7A159D5626CA230800BDC091 /* Mono2Stereo.swift */,
 				7A159D5426CA22A700BDC091 /* CAUtils.swift */,
+				7AACD99626CBADBA0056E588 /* RingBuffer.swift */,
 				7AE1140526CA51AF00B9B26B /* CARingBufferWrapper.mm */,
 				7AE1140426CA51AF00B9B26B /* CARingBufferWrapper.h */,
 				7A159D4926C8056800BDC091 /* CARingBuffer.cpp */,
@@ -151,6 +154,7 @@
 				7A159D3B26C7804B00BDC091 /* main.swift in Sources */,
 				7A159D4A26C8056800BDC091 /* CARingBuffer.cpp in Sources */,
 				7AE1140626CA51AF00B9B26B /* CARingBufferWrapper.mm in Sources */,
+				7AACD99726CBADBA0056E588 /* RingBuffer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
