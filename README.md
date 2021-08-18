@@ -46,3 +46,38 @@ Set the input and output device id by using -i and -o options like below:
 * Select Camera as `FY HD Video`
 * Select Microphone as `BlackHole 2ch`
 * Start recording
+
+
+## Problems
+
+### Crash
+
+```
+> mono2stereo
+Input Device: 82
+objc[15599]: autorelease pool page 0x13000e000 corrupted
+  magic     0x00000000 0x00000000 0x00000000 0x00000000
+  should be 0xa1a1a1a1 0x4f545541 0x454c4552 0x21455341
+  pthread   0x0
+  should be 0x10123fd40
+```
+
+Some times this program cannot start with autorelease pool problem like above. Please re-execute it. I'm now debugging to fix this problem.
+
+### Buffer underrun / overrun
+
+The input device's clock and output device's clock is not perfectly synchronized. Below is an example of my environment.
+
+```
+I: 2781381689.0, 0.0 : Avg:95.9975kHz,  E:0
+O: 2781477888.0, 0.0 : Avg:48.0005kHz,  E:0
+D: 1792.0
+```
+
+The input device is MS2109 and the theoretical sampling rate is 96kHz, but measured value was 95.9975kHz.　Similarly, the output device's theoretical sampling rate is 48kHz, but measured value was 48.0005kHz.
+
+It means output speed is a bit faster than input speed and it causes **buffer underrun**. So if you use this program for longer time, some noise will be produced.
+
+This measured values are depend on my environment, so your environment may produces other values. If input speed is faster than output speed in your environment, it causes **buffer overrun**. In this situation, output sound will be getting delayed and finally it make some noise.
+
+I will try to fix these problems in future version by inserting dummy signal and deleting extra signal.
