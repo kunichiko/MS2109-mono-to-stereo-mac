@@ -9,12 +9,20 @@ import Foundation
 
 import AVFoundation
 
+/*
+ Make mutable pointer for T with value.
+ This method is copied from https://qiita.com/ysn/items/1029d5343c089d04c831
+ */
 func makePointer<T>(withVal val: T) -> UnsafeMutablePointer<T>  {
     let pointer = UnsafeMutablePointer<T>.allocate(capacity: 1) // Tインスタンスを一つ作成する
     pointer.initialize(to: val) // 必ず初期化する
     return UnsafeMutablePointer(pointer) // UnsafePointer<T>に変換
 }
 
+
+/*
+ This engine converts MS2109 monoral 98kHz sound to stereo 48kHz sound.
+ */
 class Mono2StereoEngine {
     
     private var debug: Bool
@@ -88,7 +96,6 @@ class Mono2StereoEngine {
         return defaultDevice
     }
     
-    // Replace with Listings 8.4 - 8.14
     func createInputUnit(audioDeviceId: AudioDeviceID?) {
         // Generates a description that matches audio HAL
         var inputcd = AudioComponentDescription()
@@ -122,11 +129,10 @@ class Mono2StereoEngine {
                                          (UInt32)(MemoryLayout<UInt32>.size)),
                     "Couldn't disable output on I/O unit")
 
-        // この時点で、あなたはまだ要約でAUHALを扱っています。 この入力ユニットを特定の
-        // オーディオデバイスに関連付けていません。リスト8.6を使用して関連付けます。
-        // これは、第4章「記録」（リスト4.20および4.21を参照）で使用したAudioObjectGetPropertyData（）
-        // 呼び出しを使用して、入力ハードウェアのサンプルレートを計算します。
-        // この場合、必要なのは、システム環境設定で現在設定されている入力デバイスを識別するAudioDeviceIDだけです。
+        // この時点では inputUnit はまだ抽象レベル(AUHAL, Audio Unit Hardware Abstraction Layer)で
+        // 扱っていて、特定のオーディオデバイスには関連付けられていません。
+        // そこで、AudioDeviceIDを設定することで、具体的なデバイスと関連づけます。
+        // IDが引数で与えら得ていない場合は、デフォルトの入力デバイスのIDを使用します。
         
         var inputDeviceId = audioDeviceId ?? defaultInputDeviceId()
 
@@ -140,6 +146,7 @@ class Mono2StereoEngine {
                                         (UInt32)(MemoryLayout<AudioDeviceID>.size)),
                    "Couldn't set default device on I/O unit")
 
+        // このデバイス(HAL)の現在のフォーマット(サンプリングレートなど)を取得します
         var propertySize = (UInt32)(MemoryLayout<AudioStreamBasicDescription>.size)
         CheckError(AudioUnitGetProperty(player.pointee.inputUnit,
                                         kAudioUnitProperty_StreamFormat,
@@ -153,7 +160,7 @@ class Mono2StereoEngine {
             DebugStreamFormat("Default Input Stream Format", player.pointee.inputStreamFormat)
         }
         
-        //Listing 8.9 Adopting Hardware Input Sample Rate
+        // 割り当てた物理デバイスのフォーマット(サンプリングレートなど)を取得します
         var deviceFormat = AudioStreamBasicDescription()
         propertySize = (UInt32)(MemoryLayout<AudioStreamBasicDescription>.size)
         CheckError(AudioUnitGetProperty(player.pointee.inputUnit,
@@ -167,6 +174,7 @@ class Mono2StereoEngine {
             DebugStreamFormat("Device Format", deviceFormat)
         }
 
+        // 物理デバイスのフォーマット(サンプリングレートなど)をHALの出力フォーマットに適用して一致させます
         player.pointee.inputStreamFormat = deviceFormat
         propertySize = (UInt32)(MemoryLayout<AudioStreamBasicDescription>.size)
         CheckError(AudioUnitSetProperty(player.pointee.inputUnit,
@@ -181,6 +189,11 @@ class Mono2StereoEngine {
             DebugStreamFormat("Changed Input Stream Format", player.pointee.inputStreamFormat)
         }
 
+        // ステレオ化した際のフォーマットを計算します
+        // 基本的にはチャンネル数を2にして、サンプリングレートを半分にしているだけです
+        // メモ:
+        // mFormatFlagsに kAudioFormatFlagIsNonInterleaved を指定しておかないとうまく
+        // 出力できませんでした
         player.pointee.outputStreamFormat = deviceFormat
         player.pointee.outputStreamFormat.mChannelsPerFrame = 2
         player.pointee.outputStreamFormat.mSampleRate = deviceFormat.mSampleRate / 2
@@ -193,7 +206,7 @@ class Mono2StereoEngine {
             DebugStreamFormat("Output Stream Format", player.pointee.outputStreamFormat)
         }
 
-        //Listing 8.10 Calculating Capture Buffer Size for an I/O Unit
+        // 入力デバイスのバッファーサイズ（一度にやり取りするデータサイズ）を取得します
         var bufferSizeFrames: UInt32 = 0
         propertySize = (UInt32)(MemoryLayout<UInt32>.size)
         CheckError (AudioUnitGetProperty(player.pointee.inputUnit,
@@ -210,11 +223,9 @@ class Mono2StereoEngine {
             print("Buffer Size Bytes  : \(bufferSizeBytes)")
         }
 
-        //Listing 8.11 Creating an AudioBufferList to Receive Capture Data
-        // Allocate an AudioBufferList plus enough space for
-        // array of AudioBuffers
-        let propsize: UInt32 = UInt32(MemoryLayout.offset(of: \AudioBufferList.mBuffers)!) + (UInt32(MemoryLayout<AudioBuffer>.size) * player.pointee.inputStreamFormat.mChannelsPerFrame)
-        // malloc buffer lists
+        // 入力デバイスからの入力データを格納するための AudioBufferListを生成します
+        // 出力側でステレオに変換する直前のデータを格納するためのコンバーター用の AudioBufferListも
+        // 作っておきます
         assert(player.pointee.inputStreamFormat.mChannelsPerFrame == 1)
         player.pointee.inputBuffer = AudioBufferList( mNumberBuffers: player.pointee.inputStreamFormat.mChannelsPerFrame,
                                               mBuffers:
@@ -227,17 +238,13 @@ class Mono2StereoEngine {
                                                              mDataByteSize: bufferSizeBytes,
                                                              mData: malloc(Int(bufferSizeBytes))))
 
-        // Listing 8.12 Creating a CARingBuffer
-        // Alloc ring buffer that will hold data between the
-        // two audio devices
-//        player.pointee.ringBuffer = CARingBufferWrapper()
+        // 入力側と出力側を非同期で動作させるためにリングバッファを作成します
         player.pointee.ringBuffer = RingBuffer()
         player.pointee.ringBuffer.allocate(withChannelsPerFrame: player.pointee.inputStreamFormat.mChannelsPerFrame,
                                            bytesPerFrame: player.pointee.inputStreamFormat.mBytesPerFrame,
-                                           bufferSize: bufferSizeFrames * 4096)
+                                           bufferSize: bufferSizeFrames * 4096) // TODO change multiplier correctly
         
-        // Listing 8.13 Setting up an Input Callback on an AUHAL
-        // Set render proc to supply samples from input unit
+        // 入力側の AUHALにデータ入力処理用のコールバック関数を設定します
         var callbackStruct =  AURenderCallbackStruct()
         callbackStruct.inputProc = InputRenderProc
         callbackStruct.inputProcRefCon = UnsafeMutableRawPointer(self.player)
@@ -249,12 +256,10 @@ class Mono2StereoEngine {
                                         (UInt32)(MemoryLayout<AURenderCallbackStruct>.size)),
                    "Couldn't set input callback")
 
-        //Listing 8.14 Initializing Input AUHAL and Offset Time Counters
+        // 入力側の AUHALの初期化を実行します
         CheckError(AudioUnitInitialize(player.pointee.inputUnit),
                    "Couldn't initialize input unit")
 
-        player.pointee.firstInputSampleTime = -1
-        player.pointee.inToOutSampleTimeOffset = -1
     }
 
     func createAndConnectOutputUnit(audioDeviceId: AudioDeviceID?) {
@@ -309,7 +314,6 @@ class Mono2StereoEngine {
         CheckError(AudioUnitInitialize(player.pointee.outputUnit),
                        "Couldn't initialize output unit")
 
-        player.pointee.firstOutputSampleTime = -1
     }
 
     func start(delayTime: useconds_t) {
@@ -330,15 +334,9 @@ func InputRenderProc(_ inRefCon: UnsafeMutableRawPointer,
                      ioData: UnsafeMutablePointer<AudioBufferList>?) -> OSStatus {
     let player = inRefCon.bindMemory(to: Mono2StereoPlayer.self, capacity: 1)
 
-    //Listing 8.16 Logging Time Stamps from Input AUHAL and Calculating Time Stamp Offset
-    // Have we ever logged input timing? (for offset calculation)
-    if (player.pointee.firstInputSampleTime < 0.0) {
+    if (player.pointee.inputStartTime == nil) {
         DispatchQueue.main.async {
             player.pointee.inputStartTime = Date()
-        }
-        player.pointee.firstInputSampleTime = inTimeStamp.pointee.mSampleTime
-        if ((player.pointee.firstOutputSampleTime >= 0.0) && (player.pointee.inToOutSampleTimeOffset < 0.0)) {
-            player.pointee.inToOutSampleTimeOffset = player.pointee.firstInputSampleTime - player.pointee.firstOutputSampleTime
         }
      }
 
@@ -347,7 +345,7 @@ func InputRenderProc(_ inRefCon: UnsafeMutableRawPointer,
     // 代わりに、コールバックは、キャプチャされたサンプルの準備ができたことを示す単なる
     // シグナルです。リスト8.17に示すように、AudioUnitRender（）を使用してサンプルを自分で取得する必要があります。
 
-    //Listing 8.17 Retrieving Captured Samples from Input AUHAL
+    // Retrieving Captured Samples from Input AUHAL
     var inputProcErr = noErr
     inputProcErr = AudioUnitRender(player.pointee.inputUnit,
                                    ioActionFlags,
@@ -383,11 +381,10 @@ func InputRenderProc(_ inRefCon: UnsafeMutableRawPointer,
     // 現在スコープ内にある変数とうまく一致しています。この目的のために、前のセクションでAudioBufferListの
     // サイズと割り当てを行い、フレームカウントと リスト8.18に示すように、開始時刻はコールバックのパラメーターとして提供されます。
     
-    // Listing 8.18 Storing Captured Samples to a CARingBuffer
+    // Storing Captured Samples to a RingBuffer
     if (inputProcErr == noErr) {
         inputProcErr = player.pointee.ringBuffer.store(withBuffer: &player.pointee.inputBuffer,
-                                                       frames: inNumberFrames,
-                                                       frameNumber: Int64(inTimeStamp.pointee.mSampleTime))
+                                                       frames: inNumberFrames)
     }
     if inputProcErr != noErr {
         DispatchQueue.main.async {
@@ -406,9 +403,8 @@ func OutputRenderProc(_ inRefCon: UnsafeMutableRawPointer,
                       ioData: UnsafeMutablePointer<AudioBufferList>?) -> OSStatus {
     let player = inRefCon.bindMemory(to: Mono2StereoPlayer.self, capacity: 1)
 
-    //これで作業が始まります。構造体を作成したら、いくつかの「オフセット」時間フィールドを設定します。
-    // ここで、リスト8.16でそれらの使用を開始します。入力ユニットと出力ユニットがタイムスタンプに
-    // まったく異なるスキームを使用している可能性があるため、これらがあります。
+    // 入力ユニットと出力ユニットがタイムスタンプにまったく異なるスキームを使用している可能性があるため、
+    // それを調整するためのこれらがあります。
     // 1つは実際の「実時間」時間を使用している可能性があり、もう1つはアプリケーションの起動からの
     // 秒数をカウントしている可能性があります。これは、CARingBufferが追加されたサンプルの
     // タイムスタンプを追跡するため重要です。
@@ -416,17 +412,9 @@ func OutputRenderProc(_ inRefCon: UnsafeMutableRawPointer,
     // 両方がある場合は、それらの間の差（またはオフセット）を計算することで、これに対処できます。
 
     // Have we ever logged output timing? (for offset calculation)
-    if (player.pointee.firstOutputSampleTime < 0.0) {
+    if (player.pointee.outputStartTime == nil) {
         DispatchQueue.main.async {
             player.pointee.outputStartTime = Date()
-        }
-        // ある程度バッファが貯まるまでは出力を始めないようにする
-//        guard (player.pointee.bufferDiff >= 2048) else {
-//            return noErr
-//        }
-        player.pointee.firstOutputSampleTime = inTimeStamp.pointee.mSampleTime
-        if ((player.pointee.firstOutputSampleTime >= 0.0) && (player.pointee.inToOutSampleTimeOffset < 0.0)) {
-            player.pointee.inToOutSampleTimeOffset = player.pointee.firstInputSampleTime - player.pointee.firstOutputSampleTime
         }
     }
     
@@ -441,8 +429,7 @@ func OutputRenderProc(_ inRefCon: UnsafeMutableRawPointer,
     // Copy samples out of ring buffer
     var outputProcErr = noErr
     outputProcErr = player.pointee.ringBuffer.fetch(withBuffer: &player.pointee.converterBuffer,
-                                                    frames: inNumberFrames * 2,
-                                                    frameNumber: Int64(inTimeStamp.pointee.mSampleTime*2 + player.pointee.inToOutSampleTimeOffset))
+                                                    frames: inNumberFrames * 2)
 
     if outputProcErr != noErr {
         DispatchQueue.main.async {
@@ -506,11 +493,7 @@ struct Mono2StereoPlayer {
     var outputUnit :AudioUnit!
     var inputBuffer :AudioBufferList!
     var converterBuffer :AudioBufferList!
-//    var ringBuffer :CARingBufferWrapper!
     var ringBuffer :RingBuffer!
-    var firstInputSampleTime :Float64 = -1
-    var firstOutputSampleTime :Float64 = -1
-    var inToOutSampleTimeOffset: Float64 = -1
 
     // for debug
     var inputDebugCount: Int = 0
@@ -524,8 +507,8 @@ struct Mono2StereoPlayer {
     var inputMaxValue :Float32 = -1
     var outputMaxValue :Float32 = -1
 
-    var inputStartTime: Date = Date(timeIntervalSince1970: 0)
-    var outputStartTime: Date = Date(timeIntervalSince1970: 0)
+    var inputStartTime: Date!
+    var outputStartTime: Date!
     var inputTotalFrames: Int = 0
     var outputTotalFrames: Int = 0
     var inputSamplingRate : Double = 0

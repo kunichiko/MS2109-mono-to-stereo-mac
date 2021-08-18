@@ -80,8 +80,7 @@ class RingBuffer {
     }
 
     func store( withBuffer pbuffer:UnsafeMutablePointer<AudioBufferList>,
-                frames:UInt32,
-                frameNumber:Int64) -> CARingBufferError {
+                frames:UInt32) -> CARingBufferError {
         guard pbuffer.pointee.mBuffers.mNumberChannels == self.channels else {
             return -1
         }
@@ -103,8 +102,7 @@ class RingBuffer {
     }
 
     func fetch( withBuffer pbuffer: UnsafeMutablePointer<AudioBufferList>,
-                frames:UInt32,
-                frameNumber:Int64) -> CARingBufferError {
+                frames:UInt32) -> CARingBufferError {
         guard pbuffer.pointee.mBuffers.mNumberChannels == self.channels else {
             return -1
         }
