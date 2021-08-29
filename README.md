@@ -39,6 +39,12 @@ Set the input and output device id by using -i and -o options like below:
 > mono2stereo -i 82 -o 69
 ```
 
+You can also specify these devices by name like below:
+
+```
+> mono2stereo -i "FY HD Audio" -o "BlackHole 2ch"
+```
+
 ### Step 4. Open QuickTime Player and record
 
 * Select `File` -> `New Movie Recording`

@@ -81,6 +81,11 @@ class RingBuffer {
 
     func store( withBuffer pbuffer:UnsafeMutablePointer<AudioBufferList>,
                 frames:UInt32) -> CARingBufferError {
+        defer {
+            lock.unlock()
+        }
+        lock.lock()
+
         guard pbuffer.pointee.mBuffers.mNumberChannels == self.channels else {
             return -1
         }
@@ -103,6 +108,11 @@ class RingBuffer {
 
     func fetch( withBuffer pbuffer: UnsafeMutablePointer<AudioBufferList>,
                 frames:UInt32) -> CARingBufferError {
+        defer {
+            lock.unlock()
+        }
+        lock.lock()
+
         guard pbuffer.pointee.mBuffers.mNumberChannels == self.channels else {
             return -1
         }
@@ -136,6 +146,11 @@ class RingBuffer {
     var _sizes: [UInt] = []
 
     private func calcBufferedSize() {
+        defer {
+            lock.unlock()
+        }
+        lock.lock()
+
         let size = storePos.value - fetchPos.value
         _sizes.append(size)
         if _sizes.count > 100 {

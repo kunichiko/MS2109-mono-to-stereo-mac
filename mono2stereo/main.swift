@@ -19,23 +19,78 @@ struct Mono2stereo: ParsableCommand {
     @Flag(name: .shortAndLong, help: "Enable debug log.")
     var debug = false
 
-    @Option(name: .shortAndLong, help: "AudioUnit ID for input.")
-    var inputDeviceId: UInt32?
+    @Option(name: .shortAndLong, help: "AudioUnit ID or name for input.")
+    var inputDevice: String?
 
-    @Option(name: .shortAndLong, help: "AudioUnit ID for output.")
-    var outputDeviceId: UInt32?
+    @Option(name: .shortAndLong, help: "AudioUnit ID or name for output.")
+    var outputDevice: String?
 
+    var inputDeviceId: UInt32? {
+        guard let option = inputDevice else {
+            return anyMS2109InputDeviceId
+        }
+        if let id = UInt32.init(option) {
+            return id
+        }
+        do {
+            return try AudioDeviceFinder.allDevices().first { $0.name == option }.map { $0.audioDeviceID }
+        } catch {
+            return nil
+        }
+    }
+
+    var outputDeviceId: UInt32? {
+        guard let option = outputDevice else {
+            return AudioDeviceFinder.defaultOutputDeviceId
+        }
+        if let id = UInt32.init(option) {
+            return id
+        }
+        do {
+            return try AudioDeviceFinder.allDevices().first { $0.name == option && $0.hasOutput }.map { $0.audioDeviceID }
+        } catch {
+            return nil
+        }
+    }
+
+    
     mutating func run() throws {
         if listAudioUnits {
-            AudioDeviceFinder.findDevices()
+            do {
+                let devices = try AudioDeviceFinder.allDevices()
+                for audioDevice in devices {
+                    if let name = audioDevice.name, let uid = audioDevice.uid {
+                        let hasOut = audioDevice.hasOutput ? "O" : "X"
+                        print("Found device:\(audioDevice.audioDeviceID) hasout=\(hasOut) \"\(name)\", uid=\(uid)")
+                    }
+                }
+            } catch AudioDeviceFinderError.fatalError(let message) {
+                print(message)
+            } catch let e {
+                print("\(e)")
+            }
             return
         }
 
         let mono2stereo = Mono2StereoEngine(debug: debug)
-        mono2stereo.createInputUnit(audioDeviceId: inputDeviceId)
+        
+        guard let _inputDeviceId = self.inputDeviceId else {
+            print("No MS2109 device was found. Please specify audio device id with -i option.")
+            print("To find MS2109 device manually, please use -l option that lists all audio devices on your Mac.")
+            return
+        }
+        mono2stereo.createInputUnit(inputDeviceId: _inputDeviceId)
 
-        mono2stereo.createAndConnectOutputUnit(audioDeviceId: outputDeviceId)
+        guard let _outputDeviceId = self.outputDeviceId else {
+            print("No default output device was found. Please specify output audio device id with -o option.")
+            print("To find output device manually, please use -l option that lists all audio devices on your Mac.")
+            return
+        }
+        mono2stereo.createAndConnectOutputUnit(outputDeviceId: _outputDeviceId)
 
+        print("Input Device : \(_inputDeviceId)")
+        print("Output Device: \(_outputDeviceId)")
+        
         mono2stereo.start(delayTime: 50*1000)
 
         func timerFunc() {
@@ -51,6 +106,16 @@ struct Mono2stereo: ParsableCommand {
 
         RunLoop.main.run()
     }
+
+    
+    private var anyMS2109InputDeviceId: AudioDeviceID? {
+        do {
+            return try AudioDeviceFinder.allDevices().first { $0.name == "FY HD Audio" }.map { $0.audioDeviceID }
+        } catch {
+            return nil
+        }
+    }
+
 }
 Mono2stereo.main()
 

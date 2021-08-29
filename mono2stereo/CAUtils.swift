@@ -126,9 +126,14 @@ class AudioDevice {
     }
 }
 
+enum AudioDeviceFinderError: Error {
+    case fatalError(_ message: String)
+    
+}
 
 class AudioDeviceFinder {
-    static func findDevices() {
+
+    static func allDevices() throws -> [AudioDevice] {
         var propsize:UInt32 = 0
 
         var address:AudioObjectPropertyAddress = AudioObjectPropertyAddress(
@@ -138,9 +143,8 @@ class AudioDeviceFinder {
 
         var result:OSStatus = AudioObjectGetPropertyDataSize(AudioObjectID(kAudioObjectSystemObject), &address, UInt32(MemoryLayout<AudioObjectPropertyAddress>.size), nil, &propsize)
 
-        if (result != 0) {
-            print("Error \(result) from AudioObjectGetPropertyDataSize")
-            return
+        guard result == 0 else {
+            throw AudioDeviceFinderError.fatalError("Error \(result) from AudioObjectGetPropertyDataSize")
         }
 
         let numDevices = Int(propsize / UInt32(MemoryLayout<AudioDeviceID>.size))
@@ -151,9 +155,8 @@ class AudioDeviceFinder {
         }
 
         result = AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, &propsize, &devids);
-        if (result != 0) {
-            print("Error \(result) from AudioObjectGetPropertyData")
-            return
+        guard result == 0 else {
+            throw AudioDeviceFinderError.fatalError("Error \(result) from AudioObjectGetPropertyData")
         }
 
         var devices: [AudioDevice] = []
@@ -163,11 +166,37 @@ class AudioDeviceFinder {
         devices.sort { a, b in
             a.audioDeviceID < b.audioDeviceID
         }
-        for audioDevice in devices {
-            if let name = audioDevice.name, let uid = audioDevice.uid {
-                let hasOut = audioDevice.hasOutput ? "O" : "X"
-                print("Found device:\(audioDevice.audioDeviceID) hasout=\(hasOut) \"\(name)\", uid=\(uid)")
-            }
+        return devices
+    }
+
+
+    static var defaultInputDeviceId: AudioDeviceID {
+        var defaultDevice: AudioDeviceID = kAudioObjectUnknown
+        var propertySize = (UInt32)(MemoryLayout<AudioDeviceID>.size)
+        var defaultDeviceProperty = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultInputDevice, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMaster)
+        CheckError (AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject),
+                                               &defaultDeviceProperty,
+                                               0,
+                                               nil,
+                                               &propertySize,
+                                               &defaultDevice),
+                    "Couldn't get default input device")
+        return defaultDevice
+    }
+
+    static var defaultOutputDeviceId: AudioDeviceID? {
+        var defaultDevice: AudioDeviceID = kAudioObjectUnknown
+        var propertySize = (UInt32)(MemoryLayout<AudioDeviceID>.size)
+        var defaultDeviceProperty = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultOutputDevice, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMaster)
+        let status = AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject),
+                                               &defaultDeviceProperty,
+                                               0,
+                                               nil,
+                                               &propertySize,
+                                               &defaultDevice)
+        guard status == noErr else {
+            return nil
         }
+        return defaultDevice
     }
 }

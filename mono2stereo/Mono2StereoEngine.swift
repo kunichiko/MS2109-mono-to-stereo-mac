@@ -82,21 +82,7 @@ class Mono2StereoEngine {
         return player.pointee.outputSamplingRate
     }
 
-    private func defaultInputDeviceId() -> AudioDeviceID {
-        var defaultDevice: AudioDeviceID = kAudioObjectUnknown
-        var propertySize = (UInt32)(MemoryLayout<AudioDeviceID>.size)
-        var defaultDeviceProperty = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyDefaultInputDevice, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMaster)
-        CheckError (AudioObjectGetPropertyData(AudioObjectID(kAudioObjectSystemObject),
-                                               &defaultDeviceProperty,
-                                               0,
-                                               nil,
-                                               &propertySize,
-                                               &defaultDevice),
-                    "Couldn't get default input device")
-        return defaultDevice
-    }
-    
-    func createInputUnit(audioDeviceId: AudioDeviceID?) {
+    func createInputUnit(inputDeviceId: AudioDeviceID) {
         // Generates a description that matches audio HAL
         var inputcd = AudioComponentDescription()
         inputcd.componentType = kAudioUnitType_Output
@@ -134,15 +120,13 @@ class Mono2StereoEngine {
         // そこで、AudioDeviceIDを設定することで、具体的なデバイスと関連づけます。
         // IDが引数で与えら得ていない場合は、デフォルトの入力デバイスのIDを使用します。
         
-        var inputDeviceId = audioDeviceId ?? defaultInputDeviceId()
+        var _inputDeviceId = inputDeviceId
 
-        print("Input Device: \(inputDeviceId)")
-        
         CheckError(AudioUnitSetProperty(player.pointee.inputUnit,
                                         kAudioOutputUnitProperty_CurrentDevice,
                                         kAudioUnitScope_Global,
                                         outputBus,
-                                        &inputDeviceId,
+                                        &_inputDeviceId,
                                         (UInt32)(MemoryLayout<AudioDeviceID>.size)),
                    "Couldn't set default device on I/O unit")
 
@@ -262,7 +246,7 @@ class Mono2StereoEngine {
 
     }
 
-    func createAndConnectOutputUnit(audioDeviceId: AudioDeviceID?) {
+    func createAndConnectOutputUnit(outputDeviceId: AudioDeviceID) {
         // Generate a description that matches default output
         var outputcd = AudioComponentDescription()
         outputcd.componentType = kAudioUnitType_Output
@@ -277,15 +261,14 @@ class Mono2StereoEngine {
                    "Couldn't open component for outputUnit")
 
         let outputBus: AudioUnitScope = 0
-        if var _audioDeviceId = audioDeviceId {
-            CheckError(AudioUnitSetProperty(player.pointee.outputUnit,
-                                            kAudioOutputUnitProperty_CurrentDevice,
-                                            kAudioUnitScope_Global,
-                                            outputBus,
-                                            &_audioDeviceId,
-                                            (UInt32)(MemoryLayout<AudioDeviceID>.size)),
-                       "Couldn't set output device on I/O unit")
-        }
+        var _outputDeviceId = outputDeviceId
+        CheckError(AudioUnitSetProperty(player.pointee.outputUnit,
+                                        kAudioOutputUnitProperty_CurrentDevice,
+                                        kAudioUnitScope_Global,
+                                        outputBus,
+                                        &_outputDeviceId,
+                                        (UInt32)(MemoryLayout<AudioDeviceID>.size)),
+                   "Couldn't set output device on I/O unit")
 
         // Set the stream format on the output unit's input scope
         var propertySize = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
