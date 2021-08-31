@@ -210,21 +210,26 @@ class Mono2StereoEngine {
         // 入力デバイスからの入力データを格納するための AudioBufferListを生成します
         // 出力側でステレオに変換する直前のデータを格納するためのコンバーター用の AudioBufferListも
         // 作っておきます
-        assert(player.pointee.inputStreamFormat.mChannelsPerFrame == 1)
-        player.pointee.inputBuffer = AudioBufferList( mNumberBuffers: player.pointee.inputStreamFormat.mChannelsPerFrame,
-                                              mBuffers:
-                                                AudioBuffer( mNumberChannels: UInt32(player.pointee.inputStreamFormat.mChannelsPerFrame),
-                                                             mDataByteSize: bufferSizeBytes,
-                                                             mData: malloc(Int(bufferSizeBytes))))
-        player.pointee.converterBuffer = AudioBufferList( mNumberBuffers: player.pointee.inputStreamFormat.mChannelsPerFrame,
-                                              mBuffers:
-                                                AudioBuffer( mNumberChannels: UInt32(player.pointee.inputStreamFormat.mChannelsPerFrame),
-                                                             mDataByteSize: bufferSizeBytes,
-                                                             mData: malloc(Int(bufferSizeBytes))))
+        let channelsPerFrame = player.pointee.inputStreamFormat.mChannelsPerFrame
+        assert(channelsPerFrame == 1)
+        let mDataForInput = malloc(Int(bufferSizeBytes))
+        player.pointee.inputBuffer = AudioBufferList( mNumberBuffers: channelsPerFrame,
+                                                      mBuffers: AudioBuffer( mNumberChannels: UInt32(channelsPerFrame),
+                                                                             mDataByteSize: bufferSizeBytes,
+                                                                             mData: mDataForInput))
+
+        // モノラルからステレオに変換する際の中間バッファを用意します
+        // ステレオ変換の際、フレームサイズ(通常512)の2倍をリングバッファから取得して処理するため、
+        // 中間バッファのサイズは入力バッファの2倍のサイズが必要です
+        let mDataForConverter = malloc(Int(bufferSizeBytes*2))
+        player.pointee.converterBuffer = AudioBufferList( mNumberBuffers: channelsPerFrame,
+                                                          mBuffers: AudioBuffer( mNumberChannels: UInt32(channelsPerFrame),
+                                                                                 mDataByteSize: bufferSizeBytes,
+                                                                                 mData: mDataForConverter))
 
         // 入力側と出力側を非同期で動作させるためにリングバッファを作成します
         player.pointee.ringBuffer = RingBuffer()
-        player.pointee.ringBuffer.allocate(withChannelsPerFrame: player.pointee.inputStreamFormat.mChannelsPerFrame,
+        player.pointee.ringBuffer.allocate(withChannelsPerFrame: channelsPerFrame,
                                            bytesPerFrame: player.pointee.inputStreamFormat.mBytesPerFrame,
                                            bufferSize: bufferSizeFrames * 4096) // TODO change multiplier correctly
         
@@ -463,7 +468,8 @@ func OutputRenderProc(_ inRefCon: UnsafeMutableRawPointer,
         if player.pointee.bufferDiffs.count > 100 {
             player.pointee.bufferDiffs.remove(at: 0)
         }
-        player.pointee.bufferDiffAvg = Double(player.pointee.bufferDiffs.reduce(0, +)) / 100.0
+        player.pointee.bufferDiffAvg = Double(player.pointee.bufferDiffs.reduce(0, +)) /
+            Double(player.pointee.bufferDiffs.count)
     }
 
     return outputProcErr

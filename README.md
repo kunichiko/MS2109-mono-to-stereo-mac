@@ -56,20 +56,6 @@ You can also specify these devices by name like below:
 
 ## Problems
 
-### Crash
-
-```
-> mono2stereo
-Input Device: 82
-objc[15599]: autorelease pool page 0x13000e000 corrupted
-  magic     0x00000000 0x00000000 0x00000000 0x00000000
-  should be 0xa1a1a1a1 0x4f545541 0x454c4552 0x21455341
-  pthread   0x0
-  should be 0x10123fd40
-```
-
-Some times this program cannot start with autorelease pool problem like above. Please re-execute it. I'm now debugging to fix this problem.
-
 ### Buffer underrun / overrun
 
 The input device's clock and output device's clock is not perfectly synchronized. Below is an example of my environment.
