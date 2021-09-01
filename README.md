@@ -1,8 +1,14 @@
 # MS2109-mono-to-stereo-mac
 
+[日本語版はこちら](https://github.com/kunichiko/MS2109-mono-to-stereo-mac/blob/main/README.ja.md)
+
+## About
+
+This program converts MS2109's 96kHz mono sound stream to 48kHz stereo sound stream in real time.
+
 ## How to Use
 
-If you want to convert monoral sound to stereo and capture by QuickTime Player, you should use 'Black Hole' virtual sound device.
+If you want to convert a mono sound to stereo and capture by QuickTime Player, you should use 'Black Hole' virtual sound device.
 
 ### Step 1. install BlackHole 2ch
 
