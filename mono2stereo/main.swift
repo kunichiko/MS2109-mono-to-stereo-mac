@@ -25,6 +25,9 @@ struct Mono2stereo: ParsableCommand {
     @Option(name: .shortAndLong, help: "AudioUnit ID or name for output.")
     var outputDevice: String?
 
+    @Flag(name: .shortAndLong, help: "Invert L/R signal.")
+    var InvertLR: Bool = false
+
     var inputDeviceId: UInt32? {
         guard let option = inputDevice else {
             return anyMS2109InputDeviceId
@@ -91,7 +94,7 @@ struct Mono2stereo: ParsableCommand {
         print("Input Device : \(_inputDeviceId)")
         print("Output Device: \(_outputDeviceId)")
         
-        mono2stereo.start(delayTime: 50*1000)
+        mono2stereo.start(delayTime: 50*1000, invertLR: self.InvertLR)
 
         func timerFunc() {
             DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1.0) {

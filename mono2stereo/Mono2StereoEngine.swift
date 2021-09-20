@@ -304,7 +304,9 @@ class Mono2StereoEngine {
 
     }
 
-    func start(delayTime: useconds_t) {
+    func start(delayTime: useconds_t, invertLR: Bool = false) {
+        self.player.pointee.invertLR = invertLR
+
         // Start playing
         CheckError(AudioOutputUnitStart(player.pointee.inputUnit),
                    "AudioOutputUnitStart failed")
@@ -436,13 +438,17 @@ func OutputRenderProc(_ inRefCon: UnsafeMutableRawPointer,
     let cbuffer = cbuffers.first!
 
     let cp = cbuffer.mData!.bindMemory(to: Float32.self, capacity: Int(cbuffer.mDataByteSize)/4)
-    var ch = 0
-    for obuffer in obuffers {
+    for ch in 0..<min(2,obuffers.count) {
+        let obuffer = obuffers[ch]
         let op = obuffer.mData!.bindMemory(to: Float32.self, capacity: Int(obuffer.mDataByteSize)/4)
         for frame in 0..<Int(inNumberFrames) {
-            op[frame] = cp[frame*2+ch]
+            if player.pointee.invertLR {
+                op[frame] = cp[frame*2+ch]
+            } else {
+                // 手元の環境だとRLの順にデータが来るので、こちらをデフォルトにする
+                op[frame] = cp[frame*2+(1-ch)]
+            }
         }
-        ch += 1
     }
 
     player.pointee.outputDebugCount += 1
@@ -483,6 +489,8 @@ struct Mono2StereoPlayer {
     var inputBuffer :AudioBufferList!
     var converterBuffer :AudioBufferList!
     var ringBuffer :RingBuffer!
+    
+    var invertLR: Bool = false
 
     // for debug
     var inputDebugCount: Int = 0
