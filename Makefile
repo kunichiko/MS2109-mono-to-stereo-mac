@@ -6,10 +6,10 @@ build:
 
 install: build
 	install -d "$(bindir)"
-	install ".build/release/mono-to-stereo" "$(bindir)"
+	install ".build/release/mono2stereo" "$(bindir)"
 
 uninstall:
-	rm -rf "$(bindir)/mono-to-stereo"
+	rm -rf "$(bindir)/mono2stereo"
 
 clean:
 	rm -rf .build
