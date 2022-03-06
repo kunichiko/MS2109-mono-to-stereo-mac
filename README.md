@@ -76,6 +76,15 @@ D: 8448.0
 
 The program can be stopped with `Control + C`.
 
+If the MS2109 device cannot be found, the following message may appear.
+
+```
+No MS2109 device was found. Please specify audio device id with -i option.
+To find MS2109 device manually, please use -l option that lists all audio devices on your Mac.
+```
+
+If the name of the MS2109 device is not `FY HD Audio`, the automatic detection will fail, so specify the device manually using the method described below.
+
 ### Step 2. install BlackHole 2ch
 
 ```

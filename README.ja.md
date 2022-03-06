@@ -75,6 +75,15 @@ D: 8448.0
 
 プログラムは `Control + C` で停止できます。
 
+なお、MS2109デバイスが見つからない場合は以下のようなメッセージが出ることがあります。
+
+```
+No MS2109 device was found. Please specify audio device id with -i option.
+To find MS2109 device manually, please use -l option that lists all audio devices on your Mac.
+```
+
+MS2109デバイスの名前が `FY HD Audio` ではない場合などは自動検出に失敗してしまうので、後述の方法で手動でデバイスを指定してください。
+
 ### Step 2. BlackHole 2ch をインストールする
 
 次に、Homebrew を使ってBlackHoleをインストールします。2ch版、16ch版などいくつか種類がありますが、今回はステレオ音声が扱えれば良いので、 `blackhole-2ch` を選択します。
