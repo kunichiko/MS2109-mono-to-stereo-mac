@@ -1,6 +1,6 @@
 import XCTest
 import class Foundation.Bundle
-import mono_to_stereo
+import mono2stereo
 
 final class mono_to_stereoTests: XCTestCase {
     func testExample() throws {
