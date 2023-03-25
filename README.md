@@ -75,6 +75,7 @@ In order to install it, you need to compile it from the source code, so you need
 
 * macOS 11.6.4 (Big Sur) + Xcode 12.5.1
 * macOS 12.2.1 (Monterey) + Xcode 13.2.1
+* macOS 13.2.1 (Ventura) + Xcode 14.2
 
 If you have successfully installed it, you should be able to use the command `mono2stereo`. If you run it from the terminal and get the following output, it's OK.
 
