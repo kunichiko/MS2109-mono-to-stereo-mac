@@ -35,7 +35,7 @@ BlackHole(Out)   <== 音声出力先として BlackHole(Out)を選択
 BlackHole(In)    ==> QuickTimeの音声入力としてBlackHole(In)を選択
 ```
 
-### Step 0. Homebrewのインストール
+### Step 0-1. Homebrewのインストール
 
 この mono2stereo および BlackHoleは Homebrewを使用してインストールすることができますので、まず最初に Homebrewのインストールをしてください。
 すでに Homebreの環境ができている方は飛ばして構いません。
@@ -44,6 +44,21 @@ https://brew.sh/index_ja
 
 上記ページに掲載されているコマンドを macOSのターミナル上で実行することでインストールします。
 
+## Steo 0-2. Xcodeのインストール
+
+Homebrewが自動でインストールする Command Line Toolsではうまくビルドできないため、Xcodeをインストールする必要があります。Xcodeをインストールしたら、ターミナルで以下のコマンドを実行してみてください(すでにインストール済みの方も念の為実行してください)。
+
+```
+> xcode-select -p
+```
+
+実行した結果 `/Library/Developer/CommandLineTools` が表示された場合、以下のコマンドを実行して、developer directoryの場所を変更する必要があります。
+
+```
+> sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+```
+
+※ この例は、Xcodeを `/Applications/Xcode.app` にインストールしていることを前提としています。そうでない場合はパスを調整してください。
 
 ### Step 1. mono2stereo をインストールする
 
@@ -57,6 +72,7 @@ https://brew.sh/index_ja
 
 * macOS 11.6.4 (Big Sur) + Xcode 12.5.1
 * macOS 12.2.1 (Monterey) + Xcode 13.2.1
+* macOS 13.2.1 (Ventura) + Xcode 14.2
 
 うまくインストールできたら、 `mono2stereo` というコマンドが使えるようになっているはずです。ターミナルから実行して以下のような出力が出てきたらOKです。
 

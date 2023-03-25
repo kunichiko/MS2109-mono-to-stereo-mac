@@ -37,7 +37,7 @@ BlackHole(Out)   <== Select BlackHole(Out) as output device
 BlackHole(In)    ==> Select BlackHole(In) as input device on QuickTime.
 ```
 
-### Step 0. Install Homebrew
+### Step 0-1. Install Homebrew
 
 This mono2stereo and BlackHole can be installed using Homebrew, so please install Homebrew first.
 If you already have a Homebre environment, you can skip it.
@@ -45,6 +45,23 @@ If you already have a Homebre environment, you can skip it.
 https://brew.sh/index_ja
 
 Install it by executing the command listed on the above page on the macOS terminal.
+
+### Step 0-2. Install Xcode
+
+You need to install Xcode because building may not succeed when using the Command Line Tools that Homebrew automatically installs. After installing Xcode, please execute the following command in the terminal (even if it is already installed, please execute it just to be sure).
+
+```
+> xcode-select -p
+```
+
+If the output is /Library/Developer/CommandLineTools , you should change the active developer directory to Xcode's path, as shown below:
+
+```
+> sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+```
+
+※ This example assumes Xcode was installed in `/Applications/Xcode.app` . If it was installed in a different path, please adjust the command accordingly.
+
 
 ### Step 1. Install mono2stereo
 
