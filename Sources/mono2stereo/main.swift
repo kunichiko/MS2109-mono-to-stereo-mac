@@ -28,6 +28,12 @@ struct Mono2stereo: ParsableCommand {
     @Flag(name: .shortAndLong, help: "Invert L/R signal.")
     var InvertLR: Bool = false
 
+    @Option(name: .shortAndLong, help: "Volume adjust(+6 db 〜 -40 db). \"p6\" means +6 db, \"m6\" means -6 db.")
+    var Volume: String?
+
+    // @Flag(name: .shortAndLong, help: "Verbose mode.")
+    //var verbose: Bool = false
+
     var inputDeviceId: UInt32? {
         guard let option = inputDevice else {
             return anyMS2109InputDeviceId
@@ -50,10 +56,32 @@ struct Mono2stereo: ParsableCommand {
             return id
         }
         do {
-            return try AudioDeviceFinder.allDevices().first { $0.name == option && $0.hasOutput }.map { $0.audioDeviceID }
+            return try AudioDeviceFinder.allDevices().first { ($0.name?.localizedCaseInsensitiveContains(option) ?? false) && $0.hasOutput }.map { $0.audioDeviceID }
         } catch {
             return nil
         }
+    }
+
+    var multiplier: Double {
+        guard let option = Volume else {
+            return 1.0
+        }
+        let v: Double
+        if option.starts(with: "p") {
+            let from = option.index(option.startIndex, offsetBy: 1)
+            let to = option.endIndex
+            v = (Double.init(String(option[from..<to])) ?? 0.0) * +1.0
+        } else if option.starts(with: "m") {
+            let from = option.index(option.startIndex, offsetBy: 1)
+            let to = option.endIndex
+            v = (Double.init(String(option[from..<to])) ?? 0.0) * -1.0
+        } else {
+            v = Double.init(option) ?? 0.0
+        }
+        if 6 >= v && v >= -40 {
+            return pow(10.0, v/40)
+        }
+        return 1.0
     }
 
     
@@ -75,7 +103,7 @@ struct Mono2stereo: ParsableCommand {
             return
         }
 
-        let mono2stereo = Mono2StereoEngine(debug: debug)
+        let mono2stereo = Mono2StereoEngine(debug: self.debug, multiplier: self.multiplier)
         
         guard let _inputDeviceId = self.inputDeviceId else {
             print("No MS2109 device was found. Please specify audio device id with -i option.")

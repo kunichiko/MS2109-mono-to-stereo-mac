@@ -27,10 +27,13 @@ class Mono2StereoEngine {
     
     private var debug: Bool
     
+    private var multiplier: Double
+    
     private var player : UnsafeMutablePointer<Mono2StereoPlayer>
     
-    init(debug: Bool) {
+    init(debug: Bool, multiplier: Double) {
         self.debug = debug
+        self.multiplier = multiplier
         player = makePointer(withVal: Mono2StereoPlayer())
     }
     
@@ -306,6 +309,7 @@ class Mono2StereoEngine {
 
     func start(delayTime: useconds_t, invertLR: Bool = false) {
         self.player.pointee.invertLR = invertLR
+        self.player.pointee.multiplier = Float32(self.multiplier)
 
         // Start playing
         CheckError(AudioOutputUnitStart(player.pointee.inputUnit),
@@ -443,10 +447,10 @@ func OutputRenderProc(_ inRefCon: UnsafeMutableRawPointer,
         let op = obuffer.mData!.bindMemory(to: Float32.self, capacity: Int(obuffer.mDataByteSize)/4)
         for frame in 0..<Int(inNumberFrames) {
             if player.pointee.invertLR {
-                op[frame] = cp[frame*2+ch]
+                op[frame] = cp[frame*2+ch] * player.pointee.multiplier
             } else {
                 // 手元の環境だとRLの順にデータが来るので、こちらをデフォルトにする
-                op[frame] = cp[frame*2+(1-ch)]
+                op[frame] = cp[frame*2+(1-ch)] * player.pointee.multiplier
             }
         }
     }
@@ -491,6 +495,7 @@ struct Mono2StereoPlayer {
     var ringBuffer :RingBuffer!
     
     var invertLR: Bool = false
+    var multiplier: Float32 = 1.0
 
     // for debug
     var inputDebugCount: Int = 0
