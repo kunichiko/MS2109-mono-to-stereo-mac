@@ -28,7 +28,7 @@ struct Mono2stereo: ParsableCommand {
     @Flag(name: .shortAndLong, help: "Invert L/R signal.")
     var InvertLR: Bool = false
 
-    @Option(name: .shortAndLong, help: "Volume adjust(+6 db 〜 -40 db). \"p6\" means +6 db, \"m6\" means -6 db.")
+    @Option(name: .shortAndLong, help: "Volume adjust(+6 db 〜 -60 db). \"p6\" means +6 db, \"m6\" means -6 db.")
     var Volume: String?
 
     // @Flag(name: .shortAndLong, help: "Verbose mode.")
@@ -62,28 +62,32 @@ struct Mono2stereo: ParsableCommand {
         }
     }
 
-    var multiplier: Double {
+    var volumeValue: Double? {
         guard let option = Volume else {
-            return 1.0
+            return nil
         }
-        let v: Double
         if option.starts(with: "p") {
             let from = option.index(option.startIndex, offsetBy: 1)
             let to = option.endIndex
-            v = (Double.init(String(option[from..<to])) ?? 0.0) * +1.0
+            if let v = Double.init(String(option[from..<to])) {
+                return v * 1.0
+            }
         } else if option.starts(with: "m") {
             let from = option.index(option.startIndex, offsetBy: 1)
             let to = option.endIndex
-            v = (Double.init(String(option[from..<to])) ?? 0.0) * -1.0
-        } else {
-            v = Double.init(option) ?? 0.0
+            if let v = Double.init(String(option[from..<to])) {
+                return v * -1.0
+            }
         }
-        if 6 >= v && v >= -40 {
-            return pow(10.0, v/40)
-        }
-        return 1.0
+        return nil
     }
 
+    var multiplier: Double {
+        guard let v = self.volumeValue else {
+            return 1.0
+        }
+        return pow(10.0, v/40)
+    }
     
     mutating func run() throws {
         if listAudioUnits {
@@ -103,6 +107,13 @@ struct Mono2stereo: ParsableCommand {
             return
         }
 
+        if let v = volumeValue {
+            if v > 6.0 || v < -60 {
+                print("The given value for volume adjustment has overflowed.");
+                return
+            }
+        }
+        
         let mono2stereo = Mono2StereoEngine(debug: self.debug, multiplier: self.multiplier)
         
         guard let _inputDeviceId = self.inputDeviceId else {

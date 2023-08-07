@@ -151,6 +151,56 @@ IDでなく、以下のように名前で指定することも可能です。ID�
 * マイクとして `BlackHole 2ch` を選択します
 * 録画を開始します
 
+## ヒント
+
+### すべてのオプションを表示する
+
+-h オプションを渡すと、以下のようにすべてのオプションをリストアップすることができます。
+
+```
+> mono2stereo -h
+USAGE: mono2stereo [--list-audio-units] [--debug] [--input-device <input-device>] [--output-device <output-device>] [--invert-lr] [--volume <volume>]
+
+OPTIONS:
+  -l, --list-audio-units  Show the list of AudioUnits.
+  -d, --debug             Enable debug log.
+  -i, --input-device <input-device>
+                          AudioUnit ID or name for input.
+  -o, --output-device <output-device>
+                          AudioUnit ID or name for output.
+  -I, --invert-lr         Invert L/R signal.
+  -V, --volume <volume>   Volume adjust(+6 db 〜 -40 db). "p6" means +6 db, "m6"
+                          means -6 db.
+  -h, --help              Show help information.
+```
+
+### Invert L/R
+
+左右のチャンネルを入れ替えたい場合は -I オプションを指定してください。
+
+### Adjust volume
+
+-V オプションを使うと、以下のように出力されるボリュームを調整することができます。
+
+```
+# -20 db
+> mono2stereo -V m20
+```
+
+```
+# -3 db
+> mono2stereo -V p3
+```
+
+### デバイス名のあいまい指定
+
+入出力デバイスを指定する際、以下のようにあいまいな名前で指定することができます。
+
+```
+> mono2stereo -o "BlackHole 2ch"
+> mono2stereo -o black
+> mono2stereo -o hole
+```
 
 ## 問題
 

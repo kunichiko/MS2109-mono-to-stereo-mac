@@ -152,6 +152,56 @@ You can also specify these devices by name like below:
 * Select Microphone as `BlackHole 2ch`
 * Start recording
 
+## Tips
+
+### List all the options
+
+You can list all the options by passing -h option like below:
+
+```
+> mono2stereo -h
+USAGE: mono2stereo [--list-audio-units] [--debug] [--input-device <input-device>] [--output-device <output-device>] [--invert-lr] [--volume <volume>]
+
+OPTIONS:
+  -l, --list-audio-units  Show the list of AudioUnits.
+  -d, --debug             Enable debug log.
+  -i, --input-device <input-device>
+                          AudioUnit ID or name for input.
+  -o, --output-device <output-device>
+                          AudioUnit ID or name for output.
+  -I, --invert-lr         Invert L/R signal.
+  -V, --volume <volume>   Volume adjust(+6 db 〜 -40 db). "p6" means +6 db, "m6"
+                          means -6 db.
+  -h, --help              Show help information.
+```
+
+### Invert L/R
+
+You can invert L/R channels by using the -I option.
+
+### Adjust volume
+
+You can adjust the output volume by using the -V option, as shown below:
+
+```
+# -20 db
+> mono2stereo -V m20
+```
+
+```
+# -3 db
+> mono2stereo -V p3
+```
+
+### Ambiguous device naming
+
+When specifying input/output devices by name, you can use ambiguous device names, as shown below
+
+```
+> mono2stereo -o "BlackHole 2ch"
+> mono2stereo -o black
+> mono2stereo -o hole
+```
 
 ## Problems
 
