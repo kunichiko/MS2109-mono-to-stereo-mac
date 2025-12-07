@@ -40,7 +40,7 @@ BlackHole(In)    ==> QuickTimeの音声入力としてBlackHole(In)を選択
 この mono2stereo および BlackHoleは Homebrewを使用してインストールすることができますので、まず最初に Homebrewのインストールをしてください。
 すでに Homebreの環境ができている方は飛ばして構いません。
 
-https://brew.sh/index_ja
+https://brew.sh/
 
 上記ページに掲載されているコマンドを macOSのターミナル上で実行することでインストールします。
 
